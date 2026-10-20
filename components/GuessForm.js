@@ -2,29 +2,53 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useGame, normalize } from '../context/GameContext';
-import { colors, radius } from '../theme';
-import { FadeIn, GhostButton, GradientButton, PressableScale } from './ui';
+import { colors, fonts, radius } from '../theme';
+import { FadeIn, GhostButton, PrimaryButton, PressableScale } from './ui';
 
-// Casillas del nombre: las letras reveladas con pista se iluminan
-function LetterBoxes() {
+// Casilla de una letra: al revelarse con una pista salta y se ilumina
+function LetterBox({ i }) {
   const { currentCountry, revealed } = useGame();
-  const words = currentCountry.name.split(' ');
-  let index = 0;
+  const on = revealed.includes(i);
+  const pop = useRef(new Animated.Value(on ? 1 : 0)).current;
+
+  useEffect(() => {
+    if (on) {
+      pop.setValue(0);
+      Animated.spring(pop, { toValue: 1, friction: 4, tension: 140, useNativeDriver: true }).start();
+    } else {
+      pop.setValue(0);
+    }
+  }, [on, currentCountry.iso2]);
+
+  return (
+    <Animated.View
+      style={[
+        styles.box,
+        on && styles.boxOn,
+        { transform: [{ scale: pop.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 1.25, 1] }) }] },
+      ]}
+    >
+      <Text style={styles.boxText}>{on ? currentCountry.name[i].toUpperCase() : ''}</Text>
+    </Animated.View>
+  );
+}
+
+function LetterBoxes() {
+  const { currentCountry } = useGame();
+  let offset = 0;
   return (
     <View style={styles.words}>
-      {words.map((word, w) => (
-        <View key={w} style={styles.word}>
-          {[...word].map((ch) => {
-            const i = index++;
-            const on = revealed.includes(i + w); // +w: los espacios también cuentan como índice
-            return (
-              <View key={i} style={[styles.box, on && styles.boxOn]}>
-                <Text style={styles.boxText}>{on ? ch.toUpperCase() : ''}</Text>
-              </View>
-            );
-          })}
-        </View>
-      ))}
+      {currentCountry.name.split(' ').map((word, w) => {
+        const start = offset;
+        offset += word.length + 1;
+        return (
+          <View key={w} style={styles.word}>
+            {[...word].map((_, k) => (
+              <LetterBox key={k} i={start + k} />
+            ))}
+          </View>
+        );
+      })}
     </View>
   );
 }
@@ -37,7 +61,7 @@ function FlagsForm() {
 
   const suggestions =
     text.trim().length >= 2
-      ? countries.filter((c) => normalize(c.name).includes(normalize(text))).slice(0, 4)
+      ? countries.filter((c) => normalize(c.name).includes(normalize(text))).slice(0, 3)
       : [];
 
   const submit = (value) => {
@@ -65,14 +89,16 @@ function FlagsForm() {
         />
       </View>
       {suggestions.map((c) => (
-        <PressableScale key={c.iso2} style={styles.suggestion} onPress={() => submit(c.name)}>
-          <Ionicons name="arrow-forward-circle-outline" size={18} color={colors.accent2} />
-          <Text style={styles.suggestionText}>{c.name}</Text>
-        </PressableScale>
+        <FadeIn key={c.iso2}>
+          <PressableScale style={styles.suggestion} onPress={() => submit(c.name)}>
+            <Ionicons name="arrow-forward" size={16} color={colors.accent} />
+            <Text style={styles.suggestionText}>{c.name}</Text>
+          </PressableScale>
+        </FadeIn>
       ))}
       <View style={styles.row}>
-        <GradientButton label="Adivinar" icon="send" onPress={() => submit(text)} style={{ flex: 1 }} />
-        <GhostButton label="Pista −2s" icon="bulb-outline" onPress={useHint} style={{ flex: 1 }} />
+        <PrimaryButton label="Adivinar" icon="arrow-forward" onPress={() => submit(text)} style={{ flex: 1.3 }} />
+        <GhostButton label="Pista  −2s" icon="bulb-outline" onPress={useHint} style={{ flex: 1 }} />
       </View>
     </View>
   );
@@ -93,18 +119,18 @@ function CapitalOption({ index }) {
     <FadeIn delay={index * 90}>
       <Animated.View
         style={{
-          opacity: v.interpolate({ inputRange: [0, 1], outputRange: [0.25, 1] }),
-          transform: [{ scale: v.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }],
+          opacity: v.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }),
+          transform: [{ scale: v.interpolate({ inputRange: [0, 1], outputRange: [0.95, 1] }) }],
         }}
       >
         <PressableScale disabled={gone} onPress={() => guessCapital(option)} style={styles.option}>
-          <View style={[styles.badge, gone && { backgroundColor: colors.surface }]}>
-            <Text style={styles.badgeText}>{'ABC'[index]}</Text>
+          <View style={[styles.badge, gone && styles.badgeGone]}>
+            <Text style={[styles.badgeText, gone && { color: colors.muted }]}>{'ABC'[index]}</Text>
           </View>
           <Text style={[styles.optionText, gone && styles.optionGone]} numberOfLines={1}>
             {option}
           </Text>
-          {gone && <Ionicons name="close" size={18} color={colors.muted} />}
+          <Ionicons name={gone ? 'close' : 'chevron-forward'} size={18} color={colors.muted} />
         </PressableScale>
       </Animated.View>
     </FadeIn>
@@ -119,7 +145,7 @@ function CapitalsForm() {
       {options.map((_, i) => (
         <CapitalOption key={i} index={i} />
       ))}
-      <GhostButton label="Pista: borrar opción (−2s)" icon="bulb-outline" onPress={useHint} style={{ marginTop: 4 }} />
+      <GhostButton label="Pista: borrar una opción  −2s" icon="bulb-outline" onPress={useHint} style={{ marginTop: 2 }} />
     </View>
   );
 }
@@ -132,20 +158,21 @@ export default function GuessForm() {
 
 const styles = StyleSheet.create({
   container: { width: '100%', gap: 10 },
-  words: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 10, marginBottom: 4 },
+  words: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 12, marginBottom: 6 },
   word: { flexDirection: 'row', gap: 4 },
   box: {
-    width: 22,
-    height: 30,
-    borderRadius: 7,
+    width: 24,
+    height: 32,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
+    borderBottomWidth: 3,
   },
-  boxOn: { backgroundColor: 'rgba(124,92,255,0.35)', borderColor: colors.accent },
-  boxText: { color: colors.text, fontSize: 14, fontWeight: '800' },
+  boxOn: { backgroundColor: 'rgba(200,245,51,0.14)', borderColor: colors.accent },
+  boxText: { color: colors.accent, fontSize: 15, fontFamily: fonts.display },
   inputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -154,20 +181,22 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: colors.border,
     borderRadius: radius.md,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
   },
-  inputFocused: { borderColor: colors.accent, backgroundColor: colors.surfaceStrong },
-  input: { flex: 1, color: colors.text, fontSize: 16, paddingVertical: 14 },
+  inputFocused: { borderColor: colors.accent, backgroundColor: colors.surfaceHi },
+  input: { flex: 1, color: colors.text, fontSize: 16, fontFamily: fonts.semibold, paddingVertical: 15, outlineStyle: 'none' },
   suggestion: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: colors.surfaceStrong,
+    backgroundColor: colors.surfaceHi,
+    borderWidth: 1,
+    borderColor: colors.border,
     borderRadius: radius.md,
-    paddingVertical: 11,
+    paddingVertical: 12,
     paddingHorizontal: 14,
   },
-  suggestionText: { color: colors.text, fontSize: 15, fontWeight: '600' },
+  suggestionText: { color: colors.text, fontSize: 15, fontFamily: fonts.semibold },
   row: { flexDirection: 'row', gap: 10 },
   option: {
     flexDirection: 'row',
@@ -178,16 +207,18 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: radius.lg,
     padding: 12,
+    paddingRight: 16,
   },
   badge: {
-    width: 34,
-    height: 34,
+    width: 36,
+    height: 36,
     borderRadius: 12,
     backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  badgeText: { color: '#fff', fontWeight: '800' },
-  optionText: { flex: 1, color: colors.text, fontSize: 17, fontWeight: '700' },
+  badgeGone: { backgroundColor: colors.surfaceHi },
+  badgeText: { color: colors.onAccent, fontFamily: fonts.display, fontSize: 15 },
+  optionText: { flex: 1, color: colors.text, fontSize: 17, fontFamily: fonts.bold },
   optionGone: { textDecorationLine: 'line-through', color: colors.muted },
 });

@@ -4,7 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { useGame } from '../context/GameContext';
 import { colors } from '../theme';
 
-// Destello verde/rojo en toda la pantalla + vibración al responder
+// Viñeta de color + vibración al responder (verde acierto, rojo error)
 export default function FlashOverlay() {
   const { feedback } = useGame();
   const opacity = useRef(new Animated.Value(0)).current;
@@ -15,17 +15,20 @@ export default function FlashOverlay() {
       feedback.ok ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Error
     ).catch(() => {});
     opacity.setValue(1);
-    Animated.timing(opacity, { toValue: 0, duration: 550, useNativeDriver: true }).start();
+    Animated.timing(opacity, { toValue: 0, duration: 700, useNativeDriver: true }).start();
   }, [feedback]);
 
+  const tint = feedback?.ok ? colors.success : colors.danger;
   return (
     <Animated.View
       pointerEvents="none"
       style={[
         StyleSheet.absoluteFill,
         {
-          backgroundColor: feedback?.ok ? colors.success : colors.danger,
-          opacity: opacity.interpolate({ inputRange: [0, 1], outputRange: [0, 0.2] }),
+          borderWidth: 6,
+          borderColor: tint,
+          backgroundColor: `${tint}14`,
+          opacity,
         },
       ]}
     />

@@ -16,11 +16,11 @@ export default function Game() {
   useEffect(() => {
     if (!feedback || feedback.ok) return;
     Animated.sequence([
-      Animated.timing(shake, { toValue: 10, duration: 50, useNativeDriver: true }),
-      Animated.timing(shake, { toValue: -10, duration: 50, useNativeDriver: true }),
-      Animated.timing(shake, { toValue: 7, duration: 50, useNativeDriver: true }),
-      Animated.timing(shake, { toValue: -7, duration: 50, useNativeDriver: true }),
-      Animated.timing(shake, { toValue: 0, duration: 50, useNativeDriver: true }),
+      Animated.timing(shake, { toValue: 12, duration: 55, useNativeDriver: true }),
+      Animated.timing(shake, { toValue: -12, duration: 55, useNativeDriver: true }),
+      Animated.timing(shake, { toValue: 8, duration: 55, useNativeDriver: true }),
+      Animated.timing(shake, { toValue: -8, duration: 55, useNativeDriver: true }),
+      Animated.timing(shake, { toValue: 0, duration: 55, useNativeDriver: true }),
     ]).start();
   }, [feedback]);
 
@@ -30,12 +30,15 @@ export default function Game() {
     <FadeIn style={styles.container}>
       <Animated.View style={[styles.inner, { transform: [{ translateX: shake }] }]}>
         <ScoreBoard />
-        <Timer />
         <Flag />
+        {/* el timer queda "montado" sobre el borde inferior de la bandera */}
+        <View style={styles.timer}>
+          <Timer />
+        </View>
         <GuessForm />
         <View style={styles.footer}>
-          <GhostButton label="Reiniciar" icon="refresh" onPress={resetScore} style={{ flex: 1 }} />
-          <GhostButton label="Terminar" icon="flag" onPress={finishGame} style={{ flex: 1 }} />
+          <GhostButton small label="Reiniciar" icon="refresh" onPress={resetScore} style={{ flex: 1 }} />
+          <GhostButton small label="Terminar" icon="stop-circle-outline" onPress={finishGame} style={{ flex: 1 }} />
         </View>
       </Animated.View>
     </FadeIn>
@@ -45,5 +48,6 @@ export default function Game() {
 const styles = StyleSheet.create({
   container: { width: '100%', maxWidth: MAX_WIDTH },
   inner: { width: '100%', alignItems: 'center' },
-  footer: { flexDirection: 'row', gap: 10, width: '100%', marginTop: 22 },
+  timer: { marginTop: -40, marginBottom: 14, zIndex: 5 },
+  footer: { flexDirection: 'row', gap: 10, width: '100%', marginTop: 20 },
 });

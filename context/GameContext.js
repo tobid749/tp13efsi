@@ -25,6 +25,7 @@ export function GameProvider({ children }) {
 
   const [currentCountry, setCurrentCountry] = useState(null);
   const [score, setScore] = useState(0);
+  const [streak, setStreak] = useState(0);
   const [timeLeft, setTimeLeft] = useState(ROUND_SECONDS);
   const [revealed, setRevealed] = useState([]); // índices de letras reveladas
   const [options, setOptions] = useState([]); // capitales (modo capitales)
@@ -102,12 +103,16 @@ export function GameProvider({ children }) {
     setPlayerName(name.trim());
     setMode(selectedMode);
     setScore(0);
+    setStreak(0);
     setFeedback(null);
     setPlaying(true);
     pickCountry(selectedMode, null);
   };
 
-  const resetScore = () => setScore(0);
+  const resetScore = () => {
+    setScore(0);
+    setStreak(0);
+  };
 
   const finishGame = async () => {
     if (playerName) {
@@ -127,11 +132,13 @@ export function GameProvider({ children }) {
     if (isCorrect) {
       const gained = 10 + timeLeft;
       setScore((s) => s + gained);
-      setFeedback({ ok: true, text: `¡Correcto! +${gained} (10 + ${timeLeft}s)` });
+      setStreak((s) => s + 1);
+      setFeedback({ ok: true, delta: gained, text: `¡Correcto! 10 + ${timeLeft}s de bonus` });
       nextCountry();
     } else {
       setScore((s) => s - 1);
-      setFeedback({ ok: false, text: 'Incorrecto, -1' });
+      setStreak(0);
+      setFeedback({ ok: false, delta: -1, text: 'Incorrecto' });
     }
   };
 
@@ -184,7 +191,8 @@ export function GameProvider({ children }) {
   useEffect(() => {
     if (playing && currentCountry && timeLeft === 0) {
       setScore((s) => s - 1);
-      setFeedback({ ok: false, text: `¡Tiempo! Era ${currentCountry.name}. -1` });
+      setStreak(0);
+      setFeedback({ ok: false, delta: -1, text: `Tiempo · era ${currentCountry.name}` });
       nextCountry();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -202,7 +210,7 @@ export function GameProvider({ children }) {
   const value = {
     countries, loading, error,
     mode, playerName, playing,
-    currentCountry, score, timeLeft, revealed, options, eliminated, feedback,
+    currentCountry, score, streak, timeLeft, revealed, options, eliminated, feedback,
     leaderboard, ROUND_SECONDS,
     startGame, finishGame, guess, guessCapital, nextCountry, resetScore, useHint,
   };
